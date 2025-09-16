@@ -1,0 +1,445 @@
+import 'package:flutter/material.dart';
+import '../../utils/app_theme.dart';
+import '../../utils/app_constants.dart';
+import '../../widgets/common_widgets.dart';
+import 'asha_dashboard_screen.dart';
+
+class ASHALoginScreen extends StatefulWidget {
+  const ASHALoginScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ASHALoginScreen> createState() => _ASHALoginScreenState();
+}
+
+class _ASHALoginScreenState extends State<ASHALoginScreen>
+    with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _rememberMe = false;
+  
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAnimations();
+    _startAnimations();
+  }
+
+  void _initAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+  }
+
+  void _startAnimations() {
+    _animationController.forward();
+  }
+
+  void _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Simulate API call
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Navigate to dashboard
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const ASHADashboardScreen(),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: const Text('ASHA Worker Login'),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: AppTheme.darkGray,
+      ),
+      body: LoadingOverlay(
+        isLoading: _isLoading,
+        message: 'Logging in...',
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppTheme.spacingL),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: AppTheme.spacingXL),
+                    
+                    // Header Section
+                    _buildHeader(),
+                    
+                    const SizedBox(height: AppTheme.spacingXXL),
+                    
+                    // Login Form
+                    _buildLoginForm(),
+                    
+                    const SizedBox(height: AppTheme.spacingL),
+                    
+                    // Login Button
+                    _buildLoginButton(),
+                    
+                    const SizedBox(height: AppTheme.spacingM),
+                    
+                    // Remember Me & Forgot Password
+                    _buildFooterOptions(),
+                    
+                    const SizedBox(height: AppTheme.spacingXL),
+                    
+                    // Role Information
+                    _buildRoleInfo(),
+                    
+                    const SizedBox(height: AppTheme.spacingL),
+                    
+                    // Help Section
+                    _buildHelpSection(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        // ASHA Icon
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppTheme.primaryGreen, AppTheme.primaryGreen.withOpacity(0.8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            shape: BoxShape.circle,
+            boxShadow: AppTheme.cardShadow,
+          ),
+          child: const Icon(
+            Icons.medical_services,
+            size: 50,
+            color: Colors.white,
+          ),
+        ),
+        
+        const SizedBox(height: AppTheme.spacingM),
+        
+        Text(
+          'Welcome Back!',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppTheme.darkGray,
+          ),
+        ),
+        
+        const SizedBox(height: AppTheme.spacingS),
+        
+        Text(
+          'Login to continue your important work',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppTheme.neutralGray,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoginForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+          // Username Field
+          TextFormField(
+            controller: _usernameController,
+            decoration: const InputDecoration(
+              labelText: 'Username or Phone',
+              hintText: 'Enter your username or phone number',
+              prefixIcon: Icon(Icons.person),
+            ),
+            keyboardType: TextInputType.text,
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter your username or phone number';
+              }
+              return null;
+            },
+          ),
+          
+          const SizedBox(height: AppTheme.spacingM),
+          
+          // Password Field
+          TextFormField(
+            controller: _passwordController,
+            decoration: InputDecoration(
+              labelText: 'Password',
+              hintText: 'Enter your password',
+              prefixIcon: const Icon(Icons.lock),
+              suffixIcon: IconButton(
+                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
+            ),
+            obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => _login(),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your password';
+              }
+              if (value.length < AppConstants.minPasswordLength) {
+                return 'Password must be at least ${AppConstants.minPasswordLength} characters';
+              }
+              return null;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoginButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: CustomButton(
+        text: 'Login',
+        onPressed: _login,
+        isLoading: _isLoading,
+        type: ButtonType.primary,
+        height: 56,
+      ),
+    );
+  }
+
+  Widget _buildFooterOptions() {
+    return Column(
+      children: [
+        // Remember Me
+        Row(
+          children: [
+            Checkbox(
+              value: _rememberMe,
+              onChanged: (value) {
+                setState(() {
+                  _rememberMe = value ?? false;
+                });
+              },
+              activeColor: AppTheme.primaryGreen,
+            ),
+            Text(
+              'Remember me',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () {
+                _showForgotPasswordDialog();
+              },
+              child: const Text('Forgot Password?'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoleInfo() {
+    return CustomCard(
+      color: AppTheme.lightGreen,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.info_outline,
+                color: AppTheme.primaryGreen,
+                size: 20,
+              ),
+              const SizedBox(width: AppTheme.spacingS),
+              Text(
+                'ASHA Worker Access',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryGreen,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingS),
+          Text(
+            'As an ASHA worker, you can:',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingS),
+          _buildFeatureItem('Report new disease cases'),
+          _buildFeatureItem('Track water source conditions'),
+          _buildFeatureItem('View your submitted reports'),
+          _buildFeatureItem('Work offline when needed'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: AppTheme.primaryGreen,
+            size: 16,
+          ),
+          const SizedBox(width: AppTheme.spacingS),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHelpSection() {
+    return CustomCard(
+      color: AppTheme.primaryBlue.withOpacity(0.05),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.help_outline,
+                color: AppTheme.primaryBlue,
+              ),
+              const SizedBox(width: AppTheme.spacingS),
+              Text(
+                'Need Help?',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingS),
+          Text(
+            'Contact your supervisor or call the helpline for login assistance.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppTheme.spacingM),
+          Row(
+            children: [
+              Expanded(
+                child: CustomButton(
+                  text: 'Call Helpline',
+                  onPressed: () {
+                    // Implement call functionality
+                  },
+                  type: ButtonType.secondary,
+                  icon: Icons.phone,
+                  height: 40,
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacingM),
+              Expanded(
+                child: CustomButton(
+                  text: 'Training',
+                  onPressed: () {
+                    // Navigate to training materials
+                  },
+                  type: ButtonType.secondary,
+                  icon: Icons.school,
+                  height: 40,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showForgotPasswordDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Forgot Password'),
+        content: const Text(
+          'Please contact your supervisor or the IT helpdesk to reset your password.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+}
