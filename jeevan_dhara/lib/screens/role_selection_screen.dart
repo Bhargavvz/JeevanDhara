@@ -80,7 +80,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
         NotificationService.to.showInfo('Opening Health Officials Portal');
         break;
       case UserRole.public:
-        routeName = AppRoutes.publicHome;
+        routeName = AppRoutes.publicLogin;
         NotificationService.to.showInfo('Opening Public Health Portal');
         break;
     }

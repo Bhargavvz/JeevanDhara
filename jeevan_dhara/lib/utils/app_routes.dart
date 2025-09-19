@@ -20,6 +20,8 @@ import '../screens/health_officials/alerts_notifications_screen.dart';
 import '../screens/health_officials/outbreak_prediction_screen.dart';
 
 // Public screens
+import '../screens/public/public_login_screen.dart';
+import '../screens/public/public_signup_screen.dart';
 import '../screens/public/public_home_screen.dart';
 import '../screens/public/symptom_checker_screen.dart';
 import '../screens/public/nearby_facilities_screen.dart';
@@ -56,6 +58,8 @@ class AppRoutes {
   static const String outbreakPrediction = '/official/outbreak-prediction';
   
   // Public routes
+  static const String publicLogin = '/public/login';
+  static const String publicSignup = '/public/signup';
   static const String publicHome = '/public/home';
   static const String symptomChecker = '/public/symptom-checker';
   static const String nearbyFacilities = '/public/nearby-facilities';
@@ -153,6 +157,18 @@ class AppRoutes {
     ),
     
     // Public routes
+    GetPage(
+      name: publicLogin,
+      page: () => const PublicLoginScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: publicSignup,
+      page: () => const PublicSignupScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
     GetPage(
       name: publicHome,
       page: () => const PublicHomeScreen(),
@@ -253,6 +269,8 @@ class AppRoutes {
   static void toOutbreakPrediction() => Get.toNamed(outbreakPrediction);
   
   // Public navigation
+  static void toPublicLogin() => Get.toNamed(publicLogin);
+  static void toPublicSignup() => Get.toNamed(publicSignup);
   static void toPublicHome() => Get.offNamed(publicHome);
   static void toSymptomChecker() => Get.toNamed(symptomChecker);
   static void toNearbyFacilities() => Get.toNamed(nearbyFacilities);
