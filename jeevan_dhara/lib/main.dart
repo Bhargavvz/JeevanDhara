@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'config/firebase_config.dart';
+import 'services/auth_service.dart';
+import 'services/database_service.dart';
+import 'services/storage_service.dart';
+import 'services/firebase_messaging_service.dart';
+import 'services/image_service.dart';
 import 'utils/app_theme.dart';
 import 'utils/app_routes.dart';
 import 'utils/app_localization.dart';
@@ -9,10 +16,28 @@ import 'screens/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize Firebase
+  await FirebaseConfig.initialize();
+  
+  // Set background message handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  
   // Initialize services
   Get.put(NotificationService());
+  Get.put(AuthService());
+  Get.put(DatabaseService());
+  Get.put(StorageService());
+  Get.put(ImageService());
+  Get.put(FirebaseMessagingService());
   
   runApp(const JeevanDharaApp());
+}
+
+// Background message handler import
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await FirebaseConfig.initialize();
+  debugPrint('Background message received: ${message.messageId}');
 }
 
 class JeevanDharaApp extends StatefulWidget {
@@ -35,6 +60,12 @@ class _JeevanDharaAppState extends State<JeevanDharaApp> {
     try {
       // Request notification permissions
       await Get.find<NotificationService>().requestPermissions();
+      
+      // Subscribe to FCM topics if user is logged in
+      final authService = Get.find<AuthService>();
+      if (authService.isLoggedIn) {
+        await Get.find<FirebaseMessagingService>().subscribeToTopics();
+      }
       
       // Add any other initialization logic here
       await Future.delayed(const Duration(milliseconds: 500)); // Minimum splash time

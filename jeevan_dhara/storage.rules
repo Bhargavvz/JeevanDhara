@@ -1,0 +1,93 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Profile images - users can upload/read/delete their own profile images
+    match /profile_images/{userId}_{timestamp}.{extension} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Case report images - ASHA workers can upload, health officials can read all, creators can read their own
+    match /report_images/{reportId}_{imageIndex}_{timestamp}.{extension} {
+      // ASHA workers can upload case report images
+      allow write: if request.auth != null && 
+                      exists(/databases/$(default)/documents/users/$(request.auth.uid)) &&
+                      get(/databases/$(default)/documents/users/$(request.auth.uid)).data.role == 'asha';
+      
+      // Creators and health officials can read case report images
+      allow read: if request.auth != null && 
+                     (exists(/databases/$(default)/documents/case_reports/$(reportId)) &&
+                      (get(/databases/$(default)/documents/case_reports/$(reportId)).data.reporterId == request.auth.uid ||
+                       get(/databases/$(default)/documents/users/$(request.auth.uid)).data.role == 'health_official'));
+      
+      // Health officials can delete case report images
+      allow delete: if request.auth != null && 
+                       exists(/databases/$(default)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(default)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+    }
+    
+    // Water quality images - public users and ASHA workers can upload, health officials can read all
+    match /water_quality_images/{reportId}_{imageIndex}_{timestamp}.{extension} {
+      // Public users and ASHA workers can upload water quality images
+      allow write: if request.auth != null && 
+                      exists(/databases/$(default)/documents/users/$(request.auth.uid)) &&
+                      get(/databases/$(default)/documents/users/$(request.auth.uid)).data.role in ['public', 'asha'];
+      
+      // Creators and health officials can read water quality images
+      allow read: if request.auth != null && 
+                     (exists(/databases/$(default)/documents/water_quality_reports/$(reportId)) &&
+                      (get(/databases/$(default)/documents/water_quality_reports/$(reportId)).data.reporterId == request.auth.uid ||
+                       get(/databases/$(default)/documents/users/$(request.auth.uid)).data.role == 'health_official'));
+      
+      // Health officials can delete water quality images
+      allow delete: if request.auth != null && 
+                       exists(/databases/$(default)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(default)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+    }
+    
+    // Documents - health officials can upload/read/delete, others can read
+    match /documents/{timestamp}_{filename} {
+      // Health officials can upload documents
+      allow write: if request.auth != null && 
+                      exists(/databases/$(default)/documents/users/$(request.auth.uid)) &&
+                      get(/databases/$(default)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+      
+      // All authenticated users can read documents
+      allow read: if request.auth != null;
+      
+      // Health officials can delete documents
+      allow delete: if request.auth != null && 
+                       exists(/databases/$(default)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(default)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+    }
+    
+    // Avatar images - all authenticated users can read, users can upload their own
+    match /avatars/{filename} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+                      exists(/databases/$(default)/documents/users/$(request.auth.uid)) &&
+                      get(/databases/$(default)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+    }
+    
+    // File size and type validation
+    function isValidImageFile() {
+      return resource.size <= 10 * 1024 * 1024 && // 10MB limit
+             resource.contentType.matches('image/.*');
+    }
+    
+    function isValidDocumentFile() {
+      return resource.size <= 50 * 1024 * 1024 && // 50MB limit
+             (resource.contentType.matches('application/pdf') ||
+              resource.contentType.matches('application/msword') ||
+              resource.contentType.matches('application/vnd.openxmlformats-officedocument.wordprocessingml.document') ||
+              resource.contentType.matches('text/plain'));
+    }
+    
+    // Apply file validation to all uploads
+    match /{allPaths=**} {
+      allow write: if request.auth != null && 
+                      (resource.contentType.matches('image/.*') ? isValidImageFile() : true) &&
+                      (resource.contentType.matches('application/.*') || resource.contentType.matches('text/.*') ? isValidDocumentFile() : true);
+    }
+  }
+}

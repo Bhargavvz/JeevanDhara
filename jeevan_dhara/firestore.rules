@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - users can read/write their own data, health officials can read ASHA/public users
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && 
+                     exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+    }
+    
+    // Case reports - ASHA workers can create, health officials can read/update all, creators can read their own
+    match /case_reports/{reportId} {
+      // ASHA workers can create case reports
+      allow create: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'asha' &&
+                       request.resource.data.reporterId == request.auth.uid;
+      
+      // Report creators can read their own reports
+      allow read: if request.auth != null && 
+                     (resource.data.reporterId == request.auth.uid ||
+                      // Health officials can read all reports
+                      (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official'));
+      
+      // Health officials can update case reports (for review)
+      allow update: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+      
+      // Health officials can delete case reports
+      allow delete: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+    }
+    
+    // Water quality reports - public users can create, health officials can read all, creators can read their own
+    match /water_quality_reports/{reportId} {
+      // Public users and ASHA workers can create water quality reports
+      allow create: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['public', 'asha']) &&
+                       request.resource.data.reporterId == request.auth.uid;
+      
+      // Report creators can read their own reports
+      allow read: if request.auth != null && 
+                     (resource.data.reporterId == request.auth.uid ||
+                      // Health officials can read all reports
+                      (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official'));
+      
+      // Health officials can update water quality reports
+      allow update: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+      
+      // Health officials can delete water quality reports
+      allow delete: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+    }
+    
+    // Alerts - only health officials can create/update/delete, all authenticated users can read
+    match /alerts/{alertId} {
+      // Only health officials can create alerts
+      allow create: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official' &&
+                       request.resource.data.createdBy == request.auth.uid;
+      
+      // All authenticated users can read alerts
+      allow read: if request.auth != null;
+      
+      // Only health officials can update/delete alerts
+      allow update, delete: if request.auth != null && 
+                               exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+    }
+    
+    // Analytics collection - only health officials can read/write
+    match /analytics/{document=**} {
+      allow read, write: if request.auth != null && 
+                            exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'health_official';
+    }
+    
+    // Helper functions for validation
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isHealthOfficial() {
+      return isAuthenticated() && getUserRole() == 'health_official';
+    }
+    
+    function isASHA() {
+      return isAuthenticated() && getUserRole() == 'asha';
+    }
+    
+    function isPublic() {
+      return isAuthenticated() && getUserRole() == 'public';
+    }
+    
+    function isOwner(resourceData) {
+      return isAuthenticated() && resourceData.reporterId == request.auth.uid;
+    }
+    
+    // Data validation functions
+    function isValidCaseReport(data) {
+      return data.keys().hasAll(['reporterId', 'district', 'village', 'numberOfCases', 'symptoms', 'reportDate']) &&
+             data.numberOfCases is int && data.numberOfCases > 0 &&
+             data.symptoms is list && data.symptoms.size() > 0 &&
+             data.district is string && data.district.size() > 0 &&
+             data.village is string && data.village.size() > 0;
+    }
+    
+    function isValidWaterQualityReport(data) {
+      return data.keys().hasAll(['reporterId', 'waterSourceName', 'location', 'color', 'odor', 'taste', 'debris']) &&
+             data.waterSourceName is string && data.waterSourceName.size() > 0 &&
+             data.location is string && data.location.size() > 0 &&
+             data.color is string && data.odor is string && 
+             data.taste is string && data.debris is string;
+    }
+    
+    function isValidAlert(data) {
+      return data.keys().hasAll(['title', 'message', 'severity', 'type', 'targetRoles', 'createdBy']) &&
+             data.title is string && data.title.size() > 0 &&
+             data.message is string && data.message.size() > 0 &&
+             data.severity in ['high', 'medium', 'low'] &&
+             data.type in ['disease_outbreak', 'water_contamination', 'emergency', 'general'] &&
+             data.targetRoles is list && data.targetRoles.size() > 0;
+    }
+  }
+}

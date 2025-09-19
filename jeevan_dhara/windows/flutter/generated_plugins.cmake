@@ -4,8 +4,12 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   awesome_notifications
+  cloud_firestore
   connectivity_plus
   file_selector_windows
+  firebase_auth
+  firebase_core
+  firebase_storage
   flutter_tts
   geolocator_windows
   permission_handler_windows

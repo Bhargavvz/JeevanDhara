@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "861335800169",
+    "project_id": "jeevan-dharaa",
+    "storage_bucket": "jeevan-dharaa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:861335800169:android:2774d787fb6a64945995f8",
+        "android_client_info": {
+          "package_name": "com.example.jeevan_dhara"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5kK5m_Cj54AEBd6hm1mXkB8_nTDO7x78"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

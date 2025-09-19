@@ -1,0 +1,16 @@
+{
+  "projects": {
+    "default": "jeevan-dharaa"
+  },
+  "targets": {
+    "jeevan-dharaa": {
+      "hosting": {
+        "jeevan-dharaa-web": [
+          "jeevan-dharaa"
+        ]
+      }
+    }
+  },
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
+}
